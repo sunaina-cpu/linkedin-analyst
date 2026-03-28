@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LinkedIn Post Analyst</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500&family=Newsreader:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f5f2ed; --black: #0d0d0d; --accent: #e8420a; --accent2: #ff6b3d;
+    --muted: #8a857e; --border: rgba(13,13,13,.13); --surface: #fff; --surface2: #efeae3;
+    --mono: 'DM Mono', monospace; --display: 'Syne', sans-serif; --body: 'Newsreader', Georgia, serif;
+  }
+  html, body { background: var(--bg); color: var(--black); font-family: var(--body); font-size: 16px; line-height: 1.7; min-height: 100vh; }
+  .page { max-width: 780px; margin: 0 auto; padding: 56px 32px 100px; }
+
+  /* About */
+  .about { margin-bottom: 36px; padding-bottom: 28px; border-bottom: 1.5px solid var(--black); }
+  .about h1 { font-family: var(--display); font-size: clamp(26px, 5vw, 38px); font-weight: 800; letter-spacing: -.02em; line-height: 1.1; margin-bottom: 14px; }
+  .about h1 em { font-style: normal; color: var(--accent); }
+  .about p { font-family: var(--body); font-size: 16px; color: #3a3632; line-height: 1.7; }
+
+  /* API key */
+  .key-card { background: var(--black); border-radius: 6px; padding: 18px 22px; margin-bottom: 20px; display: flex; align-items: center; gap: 16px; }
+  .key-card label { font-family: var(--mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent2); white-space: nowrap; }
+  .key-input { flex: 1; padding: 8px 12px; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12); border-radius: 4px; font-family: var(--mono); font-size: 12px; color: rgba(255,255,255,.8); outline: none; letter-spacing: .02em; transition: border-color .14s; }
+  .key-input:focus { border-color: var(--accent2); }
+  .key-input::placeholder { color: rgba(255,255,255,.2); }
+  .key-link { font-family: var(--mono); font-size: 10px; color: rgba(255,255,255,.25); text-decoration: none; white-space: nowrap; }
+  .key-link:hover { color: var(--accent2); }
+
+  /* Input card */
+  .input-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 24px; margin-bottom: 14px; }
+  .field-label { font-family: var(--mono); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 10px; }
+  textarea { width: 100%; min-height: 180px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); font-family: var(--body); font-size: 15px; color: var(--black); line-height: 1.65; resize: vertical; outline: none; transition: border-color .14s; }
+  textarea:focus { border-color: var(--accent); }
+  textarea::placeholder { color: var(--muted); font-style: italic; }
+  .char-ct { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 8px; text-align: right; }
+
+  /* Run button */
+  .run-btn { width: 100%; padding: 14px; background: var(--black); color: #fff; font-family: var(--display); font-size: 15px; font-weight: 700; border: none; border-radius: 4px; cursor: pointer; transition: background .14s; display: flex; align-items: center; justify-content: center; gap: 10px; }
+  .run-btn:hover:not(:disabled) { background: var(--accent); }
+  .run-btn:disabled { opacity: .35; cursor: not-allowed; }
+
+  /* Error */
+  .err { margin-top: 12px; padding: 10px 14px; background: #fdf0ec; border: 1px solid var(--accent); border-radius: 4px; font-family: var(--mono); font-size: 12px; color: var(--accent); display: none; }
+
+  /* Stream */
+  .stream-box { margin-top: 24px; padding: 20px 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; font-family: var(--mono); font-size: 13px; line-height: 1.75; color: #2a2825; white-space: pre-wrap; display: none; max-height: 320px; overflow-y: auto; }
+  .cursor { display: inline-block; width: 8px; height: 15px; background: var(--accent); margin-left: 2px; animation: blink .7s infinite; vertical-align: text-bottom; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  /* Results */
+  .results { margin-top: 40px; display: none; }
+  .results-top { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1.5px solid var(--black); }
+  .results-top h3 { font-family: var(--display); font-size: 20px; font-weight: 800; letter-spacing: -.02em; flex: 1; }
+  .dl-btn { font-family: var(--mono); font-size: 11px; padding: 7px 16px; background: var(--black); color: #fff; border: none; border-radius: 3px; cursor: pointer; letter-spacing: .04em; transition: background .14s; }
+  .dl-btn:hover { background: var(--accent); }
+
+  /* Section cards */
+  .section-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 12px; overflow: hidden; animation: fadeUp .3s ease both; }
+
+  /* Section header — clickable, bold title */
+  .section-head { display: flex; align-items: center; gap: 14px; padding: 16px 22px; cursor: pointer; border-bottom: 1px solid var(--border); user-select: none; transition: background .1s; background: var(--surface2); }
+  .section-head:hover { background: #e5e0d9; }
+  .section-card.collapsed .section-head { border-bottom: none; background: var(--surface); }
+  .section-card.collapsed .section-body { display: none; }
+  .section-card.collapsed .chevron { transform: rotate(-90deg); }
+  .sec-num { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; color: var(--accent); }
+  .sec-title { font-family: var(--display); font-size: 15px; font-weight: 800; flex: 1; letter-spacing: -.01em; color: var(--black); }
+  .chevron { font-size: 11px; color: var(--muted); transition: transform .2s; }
+
+  /* Section body */
+  .section-body { padding: 22px 24px 24px; }
+
+  /* Sub-point blocks */
+  .point { margin-bottom: 18px; }
+  .point:last-child { margin-bottom: 0; }
+  .point-label { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); font-weight: 500; display: block; margin-bottom: 5px; }
+  .point-text { font-family: var(--body); font-size: 15px; line-height: 1.75; color: #2a2825; }
+
+  /* Steal vs adapt */
+  .steal-body { padding: 22px 24px 24px; }
+  .steal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .steal-card { border-radius: 5px; padding: 16px 18px; }
+  .steal-card.green { background: #edf5e8; }
+  .steal-card.yellow { background: #fdf8ec; }
+  .steal-card.red { background: #fdf0ec; border-left: 3px solid var(--accent); margin-bottom: 12px; }
+  .steal-card .slabel { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; font-weight: 500; display: block; margin-bottom: 6px; }
+  .steal-card.green .slabel { color: #3a7a2a; }
+  .steal-card.yellow .slabel { color: #8a6a10; }
+  .steal-card.red .slabel { color: var(--accent); }
+  .steal-card p { font-family: var(--body); font-size: 14px; line-height: 1.65; color: #2a2825; }
+  .writer-box { background: var(--black); border-radius: 5px; padding: 20px 22px; }
+  .writer-box .slabel { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent2); font-weight: 500; display: block; margin-bottom: 8px; }
+  .writer-box p { font-family: var(--body); font-size: 15px; line-height: 1.7; color: rgba(255,255,255,.85); }
+
+  /* Dots */
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: #fff; display: inline-block; animation: pulse 1.2s infinite; }
+  .dot:nth-child(2) { animation-delay: .2s; }
+  .dot:nth-child(3) { animation-delay: .4s; }
+  @keyframes pulse { 0%,100%{opacity:.2;transform:scale(.8)} 50%{opacity:1;transform:scale(1)} }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+  @media (max-width: 600px) {
+    .page { padding: 32px 20px 80px; }
+    .key-card { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .steal-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="about">
+    <h1>LinkedIn Post <em>Analyst</em></h1>
+    <p>Paste any LinkedIn post and get a structured breakdown of why it works — hook, narrative, pacing, psychology, and exactly what to steal or leave behind. Built for ghostwriters who need to move fast without losing what makes a post land.</p>
+  </div>
+
+  <div class="key-card">
+    <label for="apiKey">API Key</label>
+    <input class="key-input" id="apiKey" type="password" placeholder="sk-ant-..." spellcheck="false" autocomplete="off" />
+    <a class="key-link" href="https://console.anthropic.com/settings/keys" target="_blank">Get key ↗</a>
+  </div>
+
+  <div class="input-card">
+    <span class="field-label">LinkedIn post</span>
+    <textarea id="postInput" placeholder="Paste the full LinkedIn post here..."></textarea>
+    <div class="char-ct" id="charCt">0 characters</div>
+  </div>
+
+  <button class="run-btn" id="runBtn">Analyse post →</button>
+  <div class="err" id="errBox"></div>
+  <div class="stream-box" id="streamBox"></div>
+
+  <div class="results" id="results">
+    <div class="results-top">
+      <h3>Ghostwriter brief</h3>
+      <button class="dl-btn" id="dlBtn">↓ Download HTML</button>
+    </div>
+    <div id="cards"></div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+
+  var lastHtml = ''
+
+  document.getElementById('postInput').addEventListener('input', function () {
+    document.getElementById('charCt').textContent = this.value.length + ' characters'
+  })
+
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+  }
+
+  function showErr(msg) {
+    var el = document.getElementById('errBox')
+    el.textContent = msg
+    el.style.display = 'block'
+  }
+
+  function hideErr() { document.getElementById('errBox').style.display = 'none' }
+
+  var SECTIONS = [
+    { raw: '1. HOOK MECHANICS',      num: '01', title: 'Hook mechanics' },
+    { raw: '2. NARRATIVE ARC',       num: '02', title: 'Narrative arc' },
+    { raw: '3. PACING AND RHYTHM',   num: '03', title: 'Pacing and rhythm' },
+    { raw: '4. PSYCHOLOGICAL JOURNEY', num: '04', title: 'Psychological journey' },
+    { raw: '5. STEAL VS ADAPT',      num: '05', title: 'Steal vs adapt' },
+  ]
+
+  var NUM_MAP = {}, TITLE_MAP = {}
+  SECTIONS.forEach(function(s){ NUM_MAP[s.raw] = s.num; TITLE_MAP[s.raw] = s.title })
+
+  function parseSections(text) {
+    return text.split(/##\s+/).filter(function(s){ return s.trim() }).map(function(part){
+      var lines = part.split('\n')
+      var raw = lines[0].trim()
+      return { raw: raw, num: NUM_MAP[raw]||'--', title: TITLE_MAP[raw]||raw, body: lines.slice(1).join('\n').trim() }
+    })
+  }
+
+  /* Parse body text into labeled sub-points or plain paragraphs */
+  function parseBody(body) {
+    var points = []
+    var blocks = body.split(/\n(?=\*\*[^*]+\*\*[:\s])/)
+
+    blocks.forEach(function(block) {
+      block = block.trim()
+      if (!block) return
+      var boldMatch = block.match(/^\*\*(.+?)\*\*[:\s]*(.*)$/s)
+      if (boldMatch) {
+        points.push({ label: boldMatch[1].trim(), text: boldMatch[2].trim() })
+      } else {
+        // plain paragraph — no label
+        block.split('\n\n').forEach(function(p){
+          p = p.trim()
+          if (p) points.push({ label: null, text: p })
+        })
+      }
+    })
+
+    // fallback: if no bold matches at all, split on double newlines
+    if (points.length === 0) {
+      body.split('\n\n').forEach(function(p){
+        p = p.trim()
+        if (p) points.push({ label: null, text: p })
+      })
+    }
+
+    return points
+  }
+
+  function buildBodyHtml(points) {
+    return points.map(function(pt){
+      var label = pt.label ? '<span class="point-label">' + esc(pt.label) + '</span>' : ''
+      var text  = '<p class="point-text">' + esc(pt.text).replace(/\n/g, '<br>') + '</p>'
+      return '<div class="point">' + label + text + '</div>'
+    }).join('')
+  }
+
+  function renderSections(sections) {
+    var container = document.getElementById('cards')
+    container.innerHTML = ''
+
+    sections.forEach(function(sec, idx) {
+      var card = document.createElement('div')
+      card.className = 'section-card'
+      card.style.animationDelay = (idx * 0.07) + 's'
+
+      var isSteal = sec.raw === '5. STEAL VS ADAPT'
+
+      var headHtml =
+        '<div class="section-head" onclick="this.parentElement.classList.toggle(\'collapsed\')">' +
+          '<span class="sec-num">' + esc(sec.num) + '</span>' +
+          '<span class="sec-title">' + esc(sec.title) + '</span>' +
+          '<span class="chevron">&#9662;</span>' +
+        '</div>'
+
+      var bodyHtml = ''
+
+      if (isSteal) {
+        var lines = sec.body.split('\n').filter(function(l){ return l.trim() })
+
+        function extract(prefix) {
+          var line = lines.find(function(l){ return l.toLowerCase().startsWith(prefix.toLowerCase()) }) || ''
+          return line.replace(new RegExp('^' + prefix + '\\s*', 'i'), '').trim()
+        }
+
+        var steal   = extract('What to steal directly:')
+        var adapt   = extract('What to adapt:')
+        var noCopy  = extract('What not to copy:')
+        var summaryLine = lines.find(function(l){ return l.toLowerCase().startsWith('3-sentence') }) || ''
+        var summary = summaryLine.replace(/^3-sentence writer summary.*?:\s*/i, '').trim()
+
+        bodyHtml =
+          '<div class="steal-body">' +
+            '<div class="steal-grid">' +
+              '<div class="steal-card green"><span class="slabel">Steal directly</span><p>' + esc(steal) + '</p></div>' +
+              '<div class="steal-card yellow"><span class="slabel">What to adapt</span><p>' + esc(adapt) + '</p></div>' +
+            '</div>' +
+            '<div class="steal-card red"><span class="slabel">Do not copy</span><p>' + esc(noCopy) + '</p></div>' +
+            '<div class="writer-box"><span class="slabel">3-sentence writer summary</span><p>' + esc(summary) + '</p></div>' +
+          '</div>'
+      } else {
+        var points = parseBody(sec.body)
+        bodyHtml = '<div class="section-body">' + buildBodyHtml(points) + '</div>'
+      }
+
+      card.innerHTML = headHtml + bodyHtml
+      container.appendChild(card)
+    })
+
+    document.getElementById('results').style.display = 'block'
+    window.scrollTo({ top: document.getElementById('results').offsetTop - 24, behavior: 'smooth' })
+
+    var clone = document.documentElement.cloneNode(true)
+    clone.querySelectorAll('script').forEach(function(s){ s.remove() })
+    lastHtml = '<!DOCTYPE html>\n' + clone.outerHTML
+  }
+
+  document.getElementById('dlBtn').addEventListener('click', function() {
+    if (!lastHtml) return
+    var blob = new Blob([lastHtml], { type: 'text/html;charset=utf-8' })
+    var url = URL.createObjectURL(blob)
+    var a = document.createElement('a')
+    a.href = url; a.download = 'post-brief.html'
+    document.body.appendChild(a); a.click()
+    document.body.removeChild(a); URL.revokeObjectURL(url)
+  })
+
+  document.getElementById('runBtn').addEventListener('click', function() {
+    var post   = document.getElementById('postInput').value.trim()
+    var apiKey = document.getElementById('apiKey').value.trim()
+    var runBtn = document.getElementById('runBtn')
+    var streamBox = document.getElementById('streamBox')
+
+    hideErr()
+    document.getElementById('results').style.display = 'none'
+    streamBox.style.display = 'none'
+
+    if (!apiKey)                   { showErr('Paste your Anthropic API key first.'); return }
+    if (!apiKey.startsWith('sk-')) { showErr('Does not look like a valid API key (should start with sk-).'); return }
+    if (post.length < 20)          { showErr('Post too short — paste the full text.'); return }
+
+    runBtn.disabled = true
+    runBtn.innerHTML = 'Analysing <span class="dot"></span><span class="dot"></span><span class="dot"></span>'
+
+    var system = [
+      'You are a senior LinkedIn content strategist briefing a mid-level ghostwriter on why a viral post works.',
+      'Write in tight analytical prose. No fluff. No hedging.',
+      '',
+      'HARD RULES:',
+      '- No em dashes.',
+      '- No AI jargon (no "leverage", "optimize", "seamless", "robust").',
+      '- Specific observations only. Numbers and concrete examples over vague claims.',
+      '- Use labeled sub-points in bold for each section like: **Hook type** followed by the explanation.',
+      '- Paragraphs not bullet lists.',
+      '',
+      'Return EXACTLY these 5 section headers, nothing before or after.',
+      'For each section, format sub-points as **Label** followed by the explanation on the same line.',
+      '',
+      '## 1. HOOK MECHANICS',
+      '**Hook type** [explanation]',
+      '**Emotional trigger** [explanation]',
+      '**Open loop** [explanation]',
+      '**Why it works** [explanation]',
+      '**What would kill it** [explanation]',
+      '',
+      '## 2. NARRATIVE ARC',
+      '**Arc type** [explanation]',
+      '**Story beats** [explanation]',
+      '**Tension point** [explanation]',
+      '**Resolution** [explanation]',
+      '',
+      '## 3. PACING AND RHYTHM',
+      '**Rhythm type** [explanation]',
+      '**Line break logic** [explanation]',
+      '**Sentence pattern** [explanation]',
+      '',
+      '## 4. PSYCHOLOGICAL JOURNEY',
+      '**Emotional payoff** [explanation]',
+      '**Identity trigger** [explanation]',
+      '',
+      '## 5. STEAL VS ADAPT',
+      'What to steal directly: [1-2 sentences]',
+      'What to adapt: [1-2 sentences]',
+      'What not to copy: [1-2 sentences]',
+      '3-sentence writer summary: [direct brief to ghostwriter]'
+    ].join('\n')
+
+    fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1400,
+        stream: true,
+        system: system,
+        messages: [{ role: 'user', content: 'Analyse this LinkedIn post:\n\n' + post }]
+      })
+    })
+    .then(function(res) {
+      if (!res.ok) {
+        return res.json().then(function(e) {
+          throw new Error((e.error && e.error.message) || 'API error ' + res.status)
+        })
+      }
+
+      var reader = res.body.getReader()
+      var decoder = new TextDecoder()
+      var full = ''
+      var buffer = ''
+
+      streamBox.style.display = 'block'
+      streamBox.innerHTML = ''
+
+      function read() {
+        return reader.read().then(function(chunk) {
+          if (chunk.done) {
+            streamBox.style.display = 'none'
+            renderSections(parseSections(full))
+            runBtn.disabled = false
+            runBtn.innerHTML = 'Analyse post →'
+            return
+          }
+
+          buffer += decoder.decode(chunk.value, { stream: true })
+          var lines = buffer.split('\n')
+          buffer = lines.pop()
+
+          lines.forEach(function(line) {
+            if (!line.startsWith('data: ')) return
+            var data = line.slice(6).trim()
+            if (data === '[DONE]') return
+            try {
+              var json = JSON.parse(data)
+              if (json.type === 'content_block_delta' && json.delta && json.delta.type === 'text_delta') {
+                full += json.delta.text
+                streamBox.innerHTML = esc(full) + '<span class="cursor"></span>'
+                streamBox.scrollTop = streamBox.scrollHeight
+              }
+            } catch(e) {}
+          })
+
+          return read()
+        })
+      }
+      return read()
+    })
+    .catch(function(e) {
+      showErr(e.message || 'Something went wrong. Check your API key and try again.')
+      streamBox.style.display = 'none'
+      runBtn.disabled = false
+      runBtn.innerHTML = 'Analyse post →'
+    })
+  })
+
+})()
+</script>
+</body>
+</html>
