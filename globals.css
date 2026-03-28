@@ -1,0 +1,27 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500&family=Newsreader:ital,wght@0,400;0,500;1,400&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #f5f2ed;
+  --black: #0d0d0d;
+  --white: #ffffff;
+  --accent: #e8420a;
+  --accent2: #ff6b3d;
+  --muted: #8a857e;
+  --border: rgba(13,13,13,0.13);
+  --surface: #ffffff;
+  --surface2: #efeae3;
+  --mono: 'DM Mono', monospace;
+  --display: 'Syne', sans-serif;
+  --body: 'Newsreader', Georgia, serif;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--black);
+  font-family: var(--body);
+  font-size: 16px;
+  line-height: 1.7;
+  min-height: 100vh;
+}
